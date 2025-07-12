@@ -1,8 +1,6 @@
 # MandelExplorer
 
-<img width="800" height="600" alt="Image" src="https://github.com/user-attachments/assets/954a33ae-1b46-4991-aa35-456a975bb2ef" />
 <img width="800" height="600" alt="Image" src="https://github.com/user-attachments/assets/98b9b683-98e4-454e-b98f-ca5c3cfe41ae" />
-<img width="970" height="774" alt="Image" src="https://github.com/user-attachments/assets/3d3bf2fa-b37d-42a0-b8ea-280ee0f697e0" />
 
 This project aims to create a simple program, that allows users to explore the Mandelbrot Set in an interactive GUI.
 
