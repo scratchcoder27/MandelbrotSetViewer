@@ -1,4 +1,4 @@
-# MandelExplorer
+# Mandelbrot Explorer
 
 <img width="800" height="600" alt="Image" src="https://github.com/user-attachments/assets/98b9b683-98e4-454e-b98f-ca5c3cfe41ae" />
 
