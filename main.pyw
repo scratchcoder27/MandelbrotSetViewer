@@ -219,14 +219,18 @@ def interact():
     if keys[pygame.K_s] and not (keys[pygame.K_LCTRL]): center_y += move_speed
     if keys[pygame.K_a]: center_x -= move_speed
     if keys[pygame.K_d]: center_x += move_speed
+
     if keys[pygame.K_q]: zoom *= 1.1
     if keys[pygame.K_e]: zoom /= 1.1
+
     if keys[pygame.K_n]: COLOR += 1
     if keys[pygame.K_m]: COLOR -= 1
+
     if keys[pygame.K_UP]: ITERATIONS += 1
     if (keys[pygame.K_DOWN] and ITERATIONS >= 3): ITERATIONS -= 1
     if keys[pygame.K_LEFT]: set_res(RES - 0.01)
     if keys[pygame.K_RIGHT]: set_res(RES + 0.01)
+    
     if keys[pygame.K_r]: center_x, center_y, zoom = -0.5, 0.0, 1.0
     if keys[pygame.K_i]:set_res(5)
     if keys[pygame.K_SPACE]:set_res(0.5)
