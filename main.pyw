@@ -27,19 +27,20 @@ SOFTWARE.
 """
 
 
-
-
 import pygame
 import colorsys
 import threading
 import sys
-from time import time
+from time import time, perf_counter
 from tkinter.messagebox import showerror
 from traceback import format_tb
 from decimal import Decimal, getcontext
 from os import path, makedirs
+import numpy as np
+from buttons import Button, Slider, ToggleButton
+from gamebuttons import *
 
-getcontext().prec = 50
+getcontext().prec = 10
 
 def get_exe_path():
     if getattr(sys, 'frozen', False):
@@ -79,8 +80,10 @@ except Exception as e:
 clock = pygame.time.Clock()
 
 mWIDTh, mHEIGHT = int(800/RES), int(600/RES)
+
 mSurface = pygame.Surface((mWIDTh, mHEIGHT))
 
+settings = False
 
 center_x, center_y = -0.5, 0.0
 zoom = 1.0
@@ -152,28 +155,31 @@ def clamp(value, min_value, max_value):
 
 def scale_color(iter: int, escape : bool) -> tuple:
 
-    # hue = iter / ITERATIONS  # Normalized [0.0, 1.0]
     hue = (((iter + COLOR) * 4) % 256) / 256
-
+    # hue = iter / ITERATIONS  # Normalized [0.0, 1.0]
     saturation = 1.0
-    value = ((iter) / ITERATIONS) ** 0.5
-    # value = (iter / ITERATIONS)
-    value = clamp(value, 0, 1)
 
     if not escape:
         value = 0
-
+    else:
+        value = ((iter) / ITERATIONS) ** 0.5 # COSTS 0.1 SECONDS
+        # value = (iter / ITERATIONS)
+        value = clamp(value, 0, 1)
 
     r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
     return (int(r * 255), int(g * 255), int(b * 255))
 
 
+elapsed = 0.0
 
 def update():
-    global drawn, drawing, stop_rendering
+    global drawn, drawing, stop_rendering, elapsed
 
     if not drawn:
+        start_time = perf_counter()
         drawing = True
+        
+        
         for y in range(mHEIGHT):
             for x in range(mWIDTh):
                 if stop_rendering:
@@ -184,16 +190,37 @@ def update():
                     color, iter = decimal_calculate(x, y)
                 else:
                     color, iter = calculate(x, y)
+
                 mSurface.set_at((x, y), scale_color(iter, color))
 
-        # print("Drawing done", end=" ")
+        elapsed = perf_counter() - start_time
         drawing = False
-        drawn = True
-            
+        drawn = True         
+
+
+transparent_black = pygame.Color(0, 0, 0, 200)
+close_settings_button = CloseSettingsButton((WIDTH - 120, 20))
+
+def draw_settings():
+    # Create a transparent surface the size of the screen
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+    close_settings_button.draw(overlay)
+    
+    pygame.draw.rect(overlay, transparent_black, (30, 30, WIDTH-60, HEIGHT-60), border_radius=20)
+    screen.blit(overlay, (0, 0))
+
+def settings_interact(mx, my, mouse):
+    close_settings_button.update(mx, my, mouse)
 
 def draw():
+    pygame.display.set_caption(f"The Mandelbrot Set [Benchmark]Render time: {elapsed:.3f}")
+
     screen.fill((0, 0, 0))
+
     screen.blit(pygame.transform.scale(mSurface, (WIDTH, HEIGHT)), (0, 0))
+
+    if settings:    draw_settings()
     
     screen.blit(font.render(f"Position: {tuple(map((lambda q : (int(q*10000)/10000)), get_real_imaginary(mWIDTh // 2, mHEIGHT // 2)))}", True, (255, 255, 255)), (10, 10))
 
@@ -207,7 +234,7 @@ def set_res(res):
 
 keyboard_timer = 0
 def interact():
-    global center_x, center_y, zoom, drawn, RES, mWIDTh, mHEIGHT, mSurface, COLOR, ITERATIONS, RES, keyboard_timer, DECIMALMODE
+    global center_x, center_y, zoom, drawn, RES, mWIDTh, mHEIGHT, mSurface, COLOR, ITERATIONS, RES, keyboard_timer, DECIMALMODE, settings
     keys = pygame.key.get_pressed()
 
     if keyboard_timer > 0:
@@ -215,27 +242,35 @@ def interact():
 
     move_speed = 0.1 / zoom  # Move less when zoomed in
 
-    if keys[pygame.K_w]: center_y -= move_speed
-    if keys[pygame.K_s] and not (keys[pygame.K_LCTRL]): center_y += move_speed
-    if keys[pygame.K_a]: center_x -= move_speed
-    if keys[pygame.K_d]: center_x += move_speed
+    if not settings:
+        if keys[pygame.K_w]: center_y -= move_speed
+        if keys[pygame.K_s] and not (keys[pygame.K_LCTRL]): center_y += move_speed
+        if keys[pygame.K_a]: center_x -= move_speed
+        if keys[pygame.K_d]: center_x += move_speed
 
-    if keys[pygame.K_q]: zoom *= 1.1
-    if keys[pygame.K_e]: zoom /= 1.1
+        if keys[pygame.K_q]: zoom *= 1.1
+        if keys[pygame.K_e]: zoom /= 1.1
 
-    if keys[pygame.K_n]: COLOR += 1
-    if keys[pygame.K_m]: COLOR -= 1
+        if keys[pygame.K_n]: COLOR += 1
+        if keys[pygame.K_m]: COLOR -= 1
 
-    if keys[pygame.K_UP]: ITERATIONS += 1
-    if (keys[pygame.K_DOWN] and ITERATIONS >= 3): ITERATIONS -= 1
-    if keys[pygame.K_LEFT]: set_res(RES - 0.01)
-    if keys[pygame.K_RIGHT]: set_res(RES + 0.01)
+        if keys[pygame.K_UP]: ITERATIONS += 1
+        if (keys[pygame.K_DOWN] and ITERATIONS >= 3): ITERATIONS -= 1
+        if keys[pygame.K_LEFT]: set_res(RES - 0.01)
+        if keys[pygame.K_RIGHT]: set_res(RES + 0.01)
+
+        
+        if keys[pygame.K_r]: center_x, center_y, zoom = -0.5, 0.0, 1.0
+        if keys[pygame.K_i]:set_res(5)
+        if keys[pygame.K_SPACE]:set_res(0.5)
+
+        if (keys[pygame.K_0] and keyboard_timer <= 0):
+            DECIMALMODE = not DECIMALMODE
+            keyboard_timer = 10
     
-    if keys[pygame.K_r]: center_x, center_y, zoom = -0.5, 0.0, 1.0
-    if keys[pygame.K_i]:set_res(5)
-    if keys[pygame.K_SPACE]:set_res(0.5)
-    if (keys[pygame.K_0] and keyboard_timer <= 0):
-        DECIMALMODE = not DECIMALMODE
+    
+    if keys[pygame.K_TAB] and (keyboard_timer <= 0):
+        settings = not settings
         keyboard_timer = 10
 
     # When the viewport changes, re-trigger drawing
@@ -255,7 +290,14 @@ def interact():
         print("Saved mandelbrot.png")
         pygame.time.delay(1000)
 
+    mx, my = pygame.mouse.get_pos()
+    mouse = pygame.mouse.get_pressed()[0]
+    
+    if settings:
+        settings_interact(mx, my, mouse)
+
 event_thread = threading.Thread(target=update)
+
 while True:
     try:
         for event in pygame.event.get():
@@ -265,9 +307,15 @@ while True:
                     event_thread.join()
                 pygame.quit()
                 sys.exit()
+
             elif event.type == pygame.VIDEORESIZE:
                 WIDTH, HEIGHT = event.w, event.h
                 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+
+                mWIDTh, mHEIGHT = int((WIDTH / 3) / RES), int((WIDTH / 3) / RES)
+                set_res(RES)
+                drawn = False
+
 
         if not drawn and not drawing and not event_thread.is_alive():
             stop_rendering = False
@@ -276,8 +324,7 @@ while True:
 
         interact()
         draw()
-
-        pygame.display.flip()
+        pygame.display.update()
         clock.tick(60)
     
     except Exception as e:
